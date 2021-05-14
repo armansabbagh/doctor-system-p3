@@ -1,0 +1,86 @@
+version: "3.1"
+
+services:
+
+  authentication:
+    image: sajadkh/doctor_system_authentication
+    ports:
+      - 8000:8000
+    networks:
+      - backend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+  
+  doctor_panel:
+    image: sajadkh/doctor_system_doctor_panel
+    ports:
+      - 8001:8001
+    networks:
+      - backend
+    depends_on:
+      - authentication
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  patient_panel:
+    image: sajadkh/doctor_system_patient_panel
+    ports:
+      - 8002:8002
+    networks:
+      - backend
+    depends_on:
+      - authentication
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels: [APP=VOTING]
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints: [node.role == manager]
+
+  patient_panel:
+    image: sajadkh/doctor_system_patient_panel
+    ports:
+      - "8002"
+    networks:
+      - backend
+    depends_on:
+      - authentication
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints: [node.role == manager]
+
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080:8080"
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  backend:
+
